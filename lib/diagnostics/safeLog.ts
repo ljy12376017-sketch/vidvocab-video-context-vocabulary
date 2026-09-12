@@ -1,3 +1,5 @@
+import { classifyTranscriptFailure } from "@/lib/diagnostics/transcriptErrors";
+
 type Level = "info" | "warn" | "error";
 
 const SECRET_RE =
@@ -5,13 +7,20 @@ const SECRET_RE =
 
 function scrub(value: unknown): unknown {
   if (typeof value === "string") {
-    return value.replace(SECRET_RE, "[REDACTED]");
+    return value
+      .replace(SECRET_RE, "[REDACTED]")
+      .replace(/https?:\/\/[^\s)"']+/gi, "[URL]");
   }
   if (Array.isArray(value)) return value.map(scrub);
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
-      if (/key|token|secret|authorization|password/i.test(k)) {
+      if (
+        /^(authorization|password|cookie)$/i.test(k) ||
+        /(api[_-]?key|access[_-]?token|secret|proxyUrl|proxy_url|proxyurl)$/i.test(
+          k,
+        )
+      ) {
         out[k] = "[REDACTED]";
       } else {
         out[k] = scrub(v);
@@ -45,6 +54,15 @@ export function classifyYoutubeError(err: unknown): {
   code: string;
   userMessage: string;
 } {
+  if (
+    (err as { name?: string })?.name === "TranscriptFetchError" ||
+    (typeof (err as { code?: string })?.code === "string" &&
+      String((err as { code: string }).code).startsWith("TRANSCRIPT_"))
+  ) {
+    const t = classifyTranscriptFailure(err);
+    return { code: t.code, userMessage: t.userMessage };
+  }
+
   const msg = err instanceof Error ? err.message : String(err);
   const lower = msg.toLowerCase();
 
@@ -71,10 +89,27 @@ export function classifyYoutubeError(err: unknown): {
       userMessage: "YouTube API Key 无效，请检查 .env.local 中的配置。",
     };
   }
-  if (lower.includes("transcript is disabled") || lower.includes("disabled")) {
+  // Strict: only explicit “captions/subtitles disabled” wording
+  if (
+    /transcript is disabled|subtitles? are disabled|captions? (are )?disabled|captions? (have been )?turned off/i.test(
+      msg,
+    )
+  ) {
     return {
       code: "TRANSCRIPT_DISABLED",
       userMessage: "已找到候选视频，但该视频关闭了字幕，正在尝试其他视频…",
+    };
+  }
+  if (
+    lower.includes("captcha") ||
+    lower.includes("confirm you're not a bot") ||
+    lower.includes("sign in to confirm") ||
+    lower.includes("requestblocked") ||
+    lower.includes("ipblocked")
+  ) {
+    return {
+      code: "TRANSCRIPT_HTML_INTERSTITIAL",
+      userMessage: "字幕源暂时拒绝访问该视频，正在尝试其他视频或备用字幕源…",
     };
   }
   if (
@@ -87,7 +122,7 @@ export function classifyYoutubeError(err: unknown): {
       userMessage: "已找到候选视频，但该视频无可用字幕，正在尝试其他视频…",
     };
   }
-  if (lower.includes("too many request")) {
+  if (lower.includes("too many request") || lower.includes("rate limit")) {
     return {
       code: "TRANSCRIPT_RATE_LIMIT",
       userMessage: "字幕服务繁忙，正在放慢并尝试其他视频…",

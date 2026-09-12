@@ -15,6 +15,7 @@ import type {
   PipelineErrorCode,
 } from "@/lib/diagnostics/types";
 import { classifyYoutubeError, logSafe } from "@/lib/diagnostics/safeLog";
+import { classifyTranscriptFailure } from "@/lib/diagnostics/transcriptErrors";
 import {
   ensureYoutubeNetwork,
   getActiveProxyHost,
@@ -129,16 +130,23 @@ export class YoutubeCompositeClipProvider implements VideoClipProvider {
         this.recordCandidate(video.videoId, video.title, "matched", "OK");
         clips.push(...found);
       } catch (e) {
-        const classified = classifyYoutubeError(e);
-        const code =
-          ((e as { code?: string }).code as PipelineErrorCode) ||
-          (classified.code as PipelineErrorCode);
+        const classified = classifyTranscriptFailure(
+          e,
+          this.transcriptProvider.id,
+        );
+        const code = classified.code as PipelineErrorCode;
         const status =
           code === "TRANSCRIPT_DISABLED"
             ? "transcript_disabled"
             : "no_transcript";
         this.recordCandidate(video.videoId, video.title, status, code);
         this.pushNotice(classified.userMessage);
+        logSafe("warn", "youtube-composite", code, {
+          provider: classified.provider,
+          videoId: video.videoId,
+          httpStatus: classified.httpStatus ?? null,
+          errorSummary: classified.errorSummary,
+        });
       }
     }
 
@@ -152,6 +160,7 @@ export class YoutubeCompositeClipProvider implements VideoClipProvider {
       tried: this.diagnostics.candidatesTried,
       matched: clips.length,
       primary: this.diagnostics.primaryFailureCode,
+      transcriptProvider: this.transcriptProvider.id,
     });
 
     return clips.slice(0, limit);

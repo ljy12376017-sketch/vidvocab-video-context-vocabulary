@@ -8,7 +8,7 @@ export function getServerEnv() {
   return {
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     youtubeApiKey: process.env.YOUTUBE_API_KEY,
-    transcriptProvider: process.env.TRANSCRIPT_PROVIDER || "youtube-unofficial",
+    transcriptProvider: process.env.TRANSCRIPT_PROVIDER || "chain",
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   };

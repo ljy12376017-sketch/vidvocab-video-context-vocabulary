@@ -35,9 +35,13 @@ npm run dev
 ## 架构要点
 
 - `/api/define`：DeepSeek 释义（可缓存）
-- `/api/clips`：YouTube 搜索 + `TranscriptProvider`（默认 `youtube-transcript` 封装）+ 降级近义词 / 情境短文
+- `/api/clips`：YouTube 搜索 + 字幕链（默认 **youtube-transcript.ai → youtube-unofficial**）+ 降级近义词 / 情境短文
 - Provider 抽象：`SearchProvider` / `TranscriptProvider` / `VideoClipProvider`，字幕库可整包替换
 - 成本护栏：每词 DeepSeek / search / transcript 次数上限 + IP 限流
+
+### 字幕源（Vercel）
+
+默认 `TRANSCRIPT_PROVIDER=chain`：先请求 [youtube-transcript.ai](https://youtube-transcript.ai/youtube-transcript-api)（免 Key、适合机房直连），失败再回退本地/代理可用的 `youtube-unofficial`。该第三方源为 fair-use，无精确公开配额；短时高频请求可能返回限流文案（仍 HTTP 200），应用会记为 `TRANSCRIPT_RATE_LIMIT` 并回退。生产环境请勿配置 `YOUTUBE_HTTPS_PROXY=http://127.0.0.1:…`。在 Vercel 请将 `TRANSCRIPT_PROVIDER` 设为 `chain`（或留空使用默认）。
 
 ## 脚本
 

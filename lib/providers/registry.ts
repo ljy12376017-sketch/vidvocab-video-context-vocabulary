@@ -1,6 +1,8 @@
 import { YoutubeDataApiSearchProvider } from "@/lib/providers/search/youtubeDataApiSearch";
 import { FilmotSearchProvider } from "@/lib/providers/search/filmotSearch";
 import { YoutubeUnofficialTranscriptProvider } from "@/lib/providers/transcript/youtubeUnofficialTranscript";
+import { YoutubeTranscriptAiProvider } from "@/lib/providers/transcript/youtubeTranscriptAi";
+import { ChainedTranscriptProvider } from "@/lib/providers/transcript/chainedTranscript";
 import { FilmotCaptionProvider } from "@/lib/providers/transcript/filmotCaption";
 import { YoutubeCompositeClipProvider } from "@/lib/providers/clip/youtubeComposite";
 import { FilmotClipProvider } from "@/lib/providers/clip/filmotClip";
@@ -11,15 +13,26 @@ import type {
 } from "@/lib/providers/types";
 import type { ApiBudget } from "@/lib/guards/budgets";
 
+/**
+ * Default: youtube-transcript.ai (Vercel-friendly) → youtube-unofficial fallback.
+ * Override with TRANSCRIPT_PROVIDER=youtube-transcript-ai | youtube-unofficial | filmot | chain
+ */
 export function createTranscriptProvider(
-  id = process.env.TRANSCRIPT_PROVIDER || "youtube-unofficial",
+  id = process.env.TRANSCRIPT_PROVIDER || "chain",
 ): TranscriptProvider {
   switch (id) {
     case "filmot":
       return new FilmotCaptionProvider();
+    case "youtube-transcript-ai":
+      return new YoutubeTranscriptAiProvider();
     case "youtube-unofficial":
-    default:
       return new YoutubeUnofficialTranscriptProvider();
+    case "chain":
+    default:
+      return new ChainedTranscriptProvider(
+        new YoutubeTranscriptAiProvider(),
+        new YoutubeUnofficialTranscriptProvider(),
+      );
   }
 }
 
