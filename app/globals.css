@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fff8f1;
+  --foreground: #1f2a2e;
+  --coral: #ff6b4a;
+  --teal: #2ec4b6;
+  --ink: #1f2a2e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Avenir Next", "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Avenir Next Condensed", "Avenir Next", "PingFang SC",
+    ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background:
+    radial-gradient(circle at 10% 12%, rgba(255, 107, 74, 0.2), transparent 34%),
+    radial-gradient(circle at 90% 8%, rgba(46, 196, 182, 0.18), transparent 30%),
+    radial-gradient(circle at 50% 100%, rgba(255, 209, 102, 0.18), transparent 40%),
+    linear-gradient(165deg, #fff8f1 0%, #f3fffc 45%, #fff4ea 100%);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
